@@ -6,12 +6,14 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import api from "../../api/axios";
 
+
 function ContactList() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectionModel, setSelectionModel] = useState([]);
 
-  // ✅ Fetch all contacts
+
   const fetchContacts = async () => {
     try {
       setLoading(true);
@@ -29,46 +31,15 @@ function ContactList() {
     fetchContacts();
   }, []);
 
-  // ✅ Delete a contact
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this contact?");
-    if (!confirmDelete) return;
-
-    try {
-      await api.delete(`contact/${id}`);
-      setData((prev) => prev.filter((item) => item.id !== id));
-    } catch (err) {
-      console.error("Error deleting contact:", err);
-      alert("Failed to delete contact. Please try again.");
-    }
-  };
-
   const paginationModel = { page: 0, pageSize: 5 };
 
-  // ✅ Define DataGrid columns including Delete button
   const columns = [
-    { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'display_name', headerName: 'Name', width: 150 },
-    { field: 'given_name', headerName: 'First Name', width: 150 },
-    { field: 'family_name', headerName: 'Last Name', width: 150 },
-    { field: 'job_title', headerName: 'Job Title', width: 150 },
+    { field: 'id', headerName: 'ID', width: 150 },
+    { field: 'display_name', headerName: 'Name', width: 200 },
+    { field: 'given_name', headerName: 'First Name', width: 200 },
+    { field: 'family_name', headerName: 'Last Name', width: 200 },
+    { field: 'job_title', headerName: 'Job Title', width: 200 },
     { field: 'notes', headerName: 'Notes', width: 200 },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 130,
-      sortable: false,
-      renderCell: (params) => (
-        <Button
-          variant="contained"
-          color="error"
-          size="small"
-          onClick={() => handleDelete(params.row.id)}
-        >
-          Delete
-        </Button>
-      ),
-    },
   ];
 
   const rows = data.map((item, index) => ({
@@ -88,17 +59,60 @@ function ContactList() {
     return <div style={{ color: "red", textAlign: "center" }}>{error}</div>;
   }
 
+  const handleDeleteSelected = async () => {
+    
+    if (!selectionModel || !selectionModel.ids || selectionModel.ids.size === 0) return;
+
+    const idsArray = Array.from(selectionModel.ids); // convert Set to array
+
+    try {
+      await Promise.all(
+        idsArray.map((id) =>
+          api.delete(`/contact/${id}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          })
+        )
+      );
+
+      alert("Record Deleted Successfully")
+
+      setData(prev => prev.filter(contact => !idsArray.includes(contact.id)));
+      setSelectionModel({ type: 'include', ids: new Set() });
+    } catch (err) {
+      console.error("Error deleting contacts:", err);
+    }
+  };
+
+  console.log(selectionModel)
+
   return (
-    <Paper sx={{ height: 500, width: '100%' }}>
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        initialState={{ pagination: { paginationModel } }}
-        pageSizeOptions={[5, 10]}
-        checkboxSelection
-        sx={{ border: 0 }}
-      />
-    </Paper>
+    <>
+      <Button
+        variant="contained"
+        color="error"
+        size="small"
+        onClick={handleDeleteSelected}
+        disabled={selectionModel.length === 0}
+      >
+        Delete
+      </Button>
+      <br />
+      <br />
+      <Paper sx={{ height: 500, width: '100%' }}>
+        <DataGrid
+          rows={rows}
+          columns={columns}
+          initialState={{ pagination: { paginationModel } }}
+          pageSizeOptions={[5, 10]}
+          checkboxSelection
+          sx={{ border: 0 }}
+          // rowSelectionModel={selectionModel}
+          onRowSelectionModelChange={(newSelection) => {
+            setSelectionModel(newSelection);
+          }}
+        />
+      </Paper>
+    </>
   );
 }
 
