@@ -5,14 +5,14 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import api from "../../api/axios";
-
+import { useNavigate } from "react-router-dom"; // for edit navigation
 
 function ContactList() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectionModel, setSelectionModel] = useState([]);
-
+  const navigate = useNavigate();
 
   const fetchContacts = async () => {
     try {
@@ -40,6 +40,24 @@ function ContactList() {
     { field: 'family_name', headerName: 'Last Name', width: 200 },
     { field: 'job_title', headerName: 'Job Title', width: 200 },
     { field: 'notes', headerName: 'Notes', width: 200 },
+    {
+      field: 'action',
+      headerName: 'Action',
+      width: 150,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Button
+          variant="contained"
+          color="primary"
+          size="small"
+          onClick={() => navigate(`/contacts/edit/${params.row.id}`)}
+        >
+          Edit
+        </Button>
+      ),
+    },
+
   ];
 
   const rows = data.map((item, index) => ({
@@ -60,10 +78,9 @@ function ContactList() {
   }
 
   const handleDeleteSelected = async () => {
-    
     if (!selectionModel || !selectionModel.ids || selectionModel.ids.size === 0) return;
 
-    const idsArray = Array.from(selectionModel.ids); // convert Set to array
+    const idsArray = Array.from(selectionModel.ids);
 
     try {
       await Promise.all(
@@ -74,7 +91,7 @@ function ContactList() {
         )
       );
 
-      alert("Record Deleted Successfully")
+      alert("Record Deleted Successfully");
 
       setData(prev => prev.filter(contact => !idsArray.includes(contact.id)));
       setSelectionModel({ type: 'include', ids: new Set() });
@@ -82,8 +99,6 @@ function ContactList() {
       console.error("Error deleting contacts:", err);
     }
   };
-
-  console.log(selectionModel)
 
   return (
     <>
@@ -106,7 +121,6 @@ function ContactList() {
           pageSizeOptions={[5, 10]}
           checkboxSelection
           sx={{ border: 0 }}
-          // rowSelectionModel={selectionModel}
           onRowSelectionModelChange={(newSelection) => {
             setSelectionModel(newSelection);
           }}
